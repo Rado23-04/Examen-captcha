@@ -44,32 +44,36 @@
 
             for (let i = 1; i <= N; i++) {
                 try {
-                    // Attente d'une seconde avant chaque requête
+                    // Pause de 1 seconde entre chaque requête
                     await new Promise((resolve) => setTimeout(resolve, 1000));
+
                     const response = await fetch('https://api.prod.jcloudify.com/whoami', { credentials: 'include' });
 
                     if (response.ok) {
                         outputDiv.textContent += `${i}. Request succeeded\n`;
-                    } else if (response.status === 403) {
-                        outputDiv.textContent += `${i}. Error: Captcha required\n`;
+                    } else if (response.status === 403) { // Captcha requis
+                        outputDiv.textContent += `${i}. Captcha required\n`;
                         alert('Captcha required. Please solve it to continue.');
 
-                        // Vérification si CaptchaSDK est chargé
                         if (window.CaptchaSDK) {
-                            window.CaptchaSDK.renderCaptcha({
-                                onSuccess: () => {
-                                    alert('Captcha solved successfully. Resuming requests.');
-                                    i--; // Reprendre la requête en cours
-                                },
-                                onError: (err) => {
-                                    alert('Error solving Captcha: ' + err.message);
-                                    throw new Error('Captcha solution failed');
-                                },
+                            // Attendre que l'utilisateur résolve le captcha
+                            await new Promise((resolve, reject) => {
+                                window.CaptchaSDK.renderCaptcha({
+                                    onSuccess: () => {
+                                        alert('Captcha solved successfully. Resuming requests.');
+                                        resolve(); // Captcha résolu, on continue
+                                    },
+                                    onError: (err) => {
+                                        alert('Error solving Captcha: ' + err.message);
+                                        reject(err); // Problème avec le captcha
+                                    },
+                                });
                             });
-                            break; // Arrêter jusqu'à résolution du Captcha
+
+                            i--; // Réessayer la requête actuelle après résolution du captcha
                         } else {
                             alert('CaptchaSDK is not loaded. Check your configuration.');
-                            break; // Sortir de la boucle en cas de problème
+                            break; // Arrêter si le SDK du captcha n'est pas disponible
                         }
                     } else {
                         const errorText = await response.text();
@@ -81,7 +85,7 @@
                 }
             }
 
-            form.style.display = 'block'; // Réafficher le formulaire une fois terminé
+            form.style.display = 'block'; // Réafficher le formulaire après traitement
         });
     </script>
 </body>
