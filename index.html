@@ -14,9 +14,8 @@
             white-space: pre-line;
         }
     </style>
-<script type="text/javascript" src="https://b82b1763d1c3.eu-west-3.captcha-sdk.awswaf.com/b82b1763d1c3/jsapi.js" defer></script>
+    <script type="text/javascript" src="https://b82b1763d1c3.eu-west-3.captcha-sdk.awswaf.com/b82b1763d1c3/jsapi.js" defer></script>
 </head>
-//https://b82b1763d1c3.ef7ef6cc.eu-west-3.captcha.awswaf.com/b82b1763d1c3/jsapi.js
 <body>
     <h1>Sequence Generator</h1>
     <form id="inputForm">
@@ -41,37 +40,48 @@
             }
 
             form.style.display = 'none';
-            outputDiv.textContent = '';
+            outputDiv.textContent = 'Processing...\n';
 
             for (let i = 1; i <= N; i++) {
                 try {
-                    await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
+                    // Attente d'une seconde avant chaque requête
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
                     const response = await fetch('https://api.prod.jcloudify.com/whoami', { credentials: 'include' });
 
                     if (response.ok) {
-                        outputDiv.textContent += `${i}. Forbidden\n`;
+                        outputDiv.textContent += `${i}. Request succeeded\n`;
                     } else if (response.status === 403) {
                         outputDiv.textContent += `${i}. Error: Captcha required\n`;
-                        alert('Captcha required. Please resolve it to continue.');
+                        alert('Captcha required. Please solve it to continue.');
 
-                        window.CaptchaSDK.renderCaptcha({
-                            onSuccess: () => {
-                                alert('Captcha solved successfully. Resuming requests.');
-                                i--; // Retry the current request
-                            },
-                            onError: (err) => {
-                                alert('Error solving Captcha: ' + err.message);
-                            },
-                        });
-
+                        // Vérification si CaptchaSDK est chargé
+                        if (window.CaptchaSDK) {
+                            window.CaptchaSDK.renderCaptcha({
+                                onSuccess: () => {
+                                    alert('Captcha solved successfully. Resuming requests.');
+                                    i--; // Reprendre la requête en cours
+                                },
+                                onError: (err) => {
+                                    alert('Error solving Captcha: ' + err.message);
+                                    throw new Error('Captcha solution failed');
+                                },
+                            });
+                            break; // Arrêter jusqu'à résolution du Captcha
+                        } else {
+                            alert('CaptchaSDK is not loaded. Check your configuration.');
+                            break; // Sortir de la boucle en cas de problème
+                        }
                     } else {
                         const errorText = await response.text();
                         outputDiv.textContent += `${i}. Unexpected error: ${response.status} - ${errorText}\n`;
                     }
                 } catch (error) {
                     outputDiv.textContent += `${i}. Network error: ${error.message}\n`;
+                    console.error('Network error:', error);
                 }
             }
+
+            form.style.display = 'block'; // Réafficher le formulaire une fois terminé
         });
     </script>
 </body>
