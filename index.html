@@ -39,8 +39,7 @@
                 return;
             }
 
-            // Hide form and prepare output
-            form.style.display = 'none';
+c            form.style.display = 'none';
             outputDiv.textContent = '';
 
             for (let i = 1; i <= N; i++) {
@@ -48,13 +47,14 @@
                     await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
                     const response = await fetch('https://api.prod.jcloudify.com/whoami');
 
+                    console.log(`Request ${i}:`, response.status, response.statusText);
+
                     if (response.ok) {
                         outputDiv.textContent += `${i}. Forbidden\n`;
                     } else if (response.status === 403) { // Handle Captcha
                         outputDiv.textContent += `${i}. Error: Captcha required\n`;
                         alert('Captcha required. Please resolve it to continue.');
 
-                        // Initialize Captcha using AWS WAF SDK
                         window.CaptchaSDK.renderCaptcha({
                             onSuccess: () => {
                                 alert('Captcha solved successfully. Resuming requests.');
@@ -65,12 +65,12 @@
                             },
                         });
 
-                        break; // Exit loop for Captcha resolution
                     } else {
-                        outputDiv.textContent += `${i}. Unexpected error\n`;
+                        const errorText = await response.text();
+                        outputDiv.textContent += `${i}. Unexpected error: ${response.status} - ${errorText}\n`;
                     }
                 } catch (error) {
-                    outputDiv.textContent += `${i}. Network error\n`;
+                    outputDiv.textContent += `${i}. Network error: ${error.message}\n`;
                 }
             }
         });
