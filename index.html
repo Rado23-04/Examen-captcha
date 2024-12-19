@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequence App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #output {
+            margin-top: 20px;
+            white-space: pre-line;
+        }
+    </style>
+    <script type="text/javascript" src="https://b82b1763d1c3.eu-west-3.captcha-sdk.awswaf.com/b82b1763d1c3/jsapi.js"></script>
+</head>
+<body>
+    <h1>Sequence Generator</h1>
+    <form id="inputForm">
+        <label for="numberInput">Enter a number (1-1000):</label>
+        <input type="number" id="numberInput" min="1" max="1000" required>
+        <button type="submit">Submit</button>
+    </form>
+
+    <div id="output"></div>
+
+    <script>
+        const form = document.getElementById('inputForm');
+        const outputDiv = document.getElementById('output');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const N = parseInt(document.getElementById('numberInput').value, 10);
+            if (isNaN(N) || N < 1 || N > 1000) {
+                alert('Please enter a valid number between 1 and 1000.');
+                return;
+            }
+
+            // Hide form and prepare output
+            form.style.display = 'none';
+            outputDiv.textContent = '';
+
+            for (let i = 1; i <= N; i++) {
+                try {
+                    await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second
+                    const response = await fetch('https://api.prod.jcloudify.com/whoami');
+
+                    if (response.ok) {
+                        outputDiv.textContent += `${i}. Forbidden\n`;
+                    } else if (response.status === 403) { // Handle Captcha
+                        outputDiv.textContent += `${i}. Error: Captcha required\n`;
+                        alert('Captcha required. Please resolve it to continue.');
+
+                        // Initialize Captcha using AWS WAF SDK
+                        window.CaptchaSDK.renderCaptcha({
+                            onSuccess: () => {
+                                alert('Captcha solved successfully. Resuming requests.');
+                                i--; // Retry the current request
+                            },
+                            onError: (err) => {
+                                alert('Error solving Captcha: ' + err.message);
+                            },
+                        });
+
+                        break; // Exit loop for Captcha resolution
+                    } else {
+                        outputDiv.textContent += `${i}. Unexpected error\n`;
+                    }
+                } catch (error) {
+                    outputDiv.textContent += `${i}. Network error\n`;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
